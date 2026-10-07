@@ -1,10 +1,12 @@
-<programa> ::= <tipo_juego> <grid> <definiciones> <eventos>
+<programa> ::= <tipo_juego> <grid> <configuraciones_opcionales> <definiciones> <personalizaciones> <eventos>
 
-<tipo_juego> ::= "GAME_TYPE" "SNAKE"
+<tipo_juego> ::= "GAME_TYPE" "TETRIS"
 <grid>       ::= "GAME_GRID" "(" <numero> "," <numero> ")"
-<color>      
+
+<configuraciones_opcionales> ::= <game_color> | e
+<game_color>                 ::= "GAME_COLOR" <identificador>
+
 <definiciones> ::= <definicion_shape> | <definicion_shape> <definiciones>
-<eventos>    ::= <evento> | <evento> <eventos>
 
 <definicion_shape> ::= "DEFINE" "SHAPE" <identificador> ":" <estados> "END"
 <estados>          ::= <estado> | <estado> <estados>
@@ -13,21 +15,30 @@
 <fila>             ::= "[" <valores_fila> "]"
 <valores_fila>     ::= <numero> | <numero> "," <valores_fila>
 
-<evento>         ::= "ON" <nombre_evento_snake> ":" <acciones_snake> "END"
-<nombre_evento_snake> ::= "START" | "TICK" | "EAT_FOOD" | "COLLISION_WALL" | "COLLISION_SELF" | "KEY_UP" | "KEY_DOWN" | "KEY_LEFT" | "KEY_RIGHT"
-<acciones_snake>     ::= <accion_snake> | <accion_snake> <acciones_snake>
+<!-- NUEVAS REGLAS AGREGADAS PARA LA ACTIVIDAD 3 -->
+<personalizaciones> ::= <regla_personalizacion> <personalizaciones> | e
+<regla_personalizacion> ::= <definicion_color> | <definicion_chance> | <definicion_powerup>
 
-<accion_snake> ::= <accion_spawn_jugador> | <accion_spawn_comida> | <accion_mover> | <accion_direccion> | <accion_puntos> | <accion_crecer> | <accion_gameover>
-<accion_spawn_jugador> ::= "SPAWN" "PLAYER" "AT" <coordenadas>
-<accion_spawn_comida>  ::= "SPAWN" "FOOD" "AT" "RANDOM"
-<accion_mover>         ::= "MOVE" "PLAYER" "FORWARD"
-<accion_direccion>     ::= "SET_DIRECTION" <direccion>
-<accion_puntos>        ::= "INCREASE_SCORE" <numero>
-<accion_crecer>        ::= "GROW" "PLAYER" <numero>
-<accion_gameover>      ::= "GAME_OVER"
+<definicion_color>   ::= "COLOR" <identificador> ":" <hex_color>
+<definicion_chance>  ::= "CHANCE" <identificador> ":" <numero>
+<definicion_powerup> ::= "POWERUP" <identificador> ":" <numero>
 
-<coordenadas>   ::= "(" <numero> "," <numero> ")"
-<direccion>     ::= "UP" | "DOWN" | "LEFT" | "RIGHT"
+<hex_color>     ::= <hex_digit> <hex_digit> <hex_digit> <hex_digit> <hex_digit> <hex_digit>
+<hex_digit>     ::= "0"..."9" | "A"..."F"
+
+<eventos>       ::= <evento> | <evento> <eventos>
+<evento>        ::= "ON" <nombre_evento_tetris> ":" <acciones_tetris> "END"
+<nombre_evento_tetris> ::= "START" | "TICK" | "LINE_CLEAR" | "KEY_UP" | "KEY_DOWN" | "KEY_LEFT" | "KEY_RIGHT"
+<acciones_tetris>      ::= <accion_tetris> | <accion_tetris> <acciones_tetris>
+
+<accion_tetris> ::= <accion_spawn> | <accion_mover> | <accion_rotar> | <accion_puntos> | <accion_game_over>
+<accion_spawn>  ::= "SPAWN" "RANDOM_SHAPE"
+<accion_mover>  ::= "MOVE" "CURRENT_PIECE" <direccion>
+<accion_rotar>  ::= "ROTATE" "CURRENT_PIECE"
+<accion_puntos> ::= "INCREASE_SCORE" <numero>
+<accion_game_over> ::= "GAME_OVER"
+
+<direccion>     ::= "LEFT" | "RIGHT" | "DOWN"
 <identificador> ::= <letra> | <letra> <identificador>
 <numero>        ::= <digito> | <digito> <numero>
 <letra>         ::= "A"..."Z" | "_"

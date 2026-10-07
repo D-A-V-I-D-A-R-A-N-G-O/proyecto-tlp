@@ -1,0 +1,100 @@
+===============================================================================
+               DOCUMENTO DE CAMBIOS: BRICKSCRIPT (TETRIS REMAKE)
+===============================================================================
+
+PROYECTO: Extensión Estructural de BrickScript (Actividad 3)
+
+===============================================================================
+1. RESUMEN TÉCNICO Y RETROCOMPATIBILIDAD
+===============================================================================
+El ecosistema de BrickScript fue refactorizado para soportar colores por pieza (COLOR),
+probabilidades de selección ponderada (CHANCE) y Power-Ups dinámicos (POWERUP). 
+
+Se garantiza la RETROCOMPATIBILIDAD TOTAL (Regla de Oro). Si se compila un archivo
+.brick antiguo (sin etiquetas de color o probabilidad), el compilador asigna valores 
+predeterminados en el AST JSON y el motor runtime utiliza lecturas seguras (.get()), 
+permitiendo que el tetris.brick original funcione sin errores.
+
+===============================================================================
+2. LÍNEAS ESPECÍFICAS DE CÓDIGO AÑADIDAS Y MODIFICADAS
+===============================================================================
+
+-------------------------------------------------------------------------------
+A. ARCHIVO: compiler.py
+-------------------------------------------------------------------------------
+- Línea 11: Se actualizó el token_regex en lexer() para incluir la expresión 
+  r'\b[A-F0-9]{6}\b', permitiendo capturar códigos hexadecimales de 6 dígitos 
+  como un único token antes de evaluar números o letras.
+- Líneas 20-28: Se inicializaron en self.ast las claves 'shapes_color', 
+  'shapes_chance' y 'power_up'.
+- Líneas 38-43: Se añadieron las ramificaciones condicionales en parse() para 
+  detectar las palabras clave 'CHANCE', 'COLOR' y 'POWERUP'.
+- Líneas 75-92: Se crearon las funciones de parseo:
+    * parsear_color_shape(): Mapea el color Hex a la figura en 'shapes_color'.
+    * parsear_probabilidad_shape(): Guarda el entero de peso en 'shapes_chance'.
+    * parsear_powerup(): Registra la configuración del Power-Up en 'power_up'.
+- Líneas 115-118: Se integró .setdefault() en parsear_shape() para asignar 
+  un color por defecto ("FFFF00") y probabilidad base (1) si la figura no posee 
+  atribuciones explícitas (garantizando retrocompatibilidad).
+
+-------------------------------------------------------------------------------
+B. ARCHIVO: runtime.py
+-------------------------------------------------------------------------------
+- Líneas 25-28: Se añadieron en __init__ los atributos self.siguiente_powerup 
+  y self.tipo_powerup_actual para controlar la cola de activación de Power-Ups.
+- Líneas 120-142 (tetris_spawn_pieza):
+    * Se reemplazó la selección aleatoria simple por random.choices(..., weights=pesos), 
+      utilizando la lista de pesos de 'shapes_chance' (librería estándar de Python 3).
+    * Se integró la asignación dinámica de colores leyendo 'shapes_color' y aplicándolo 
+      a self.color_pieza_actual.
+    * Si hay un Power-Up activado, la ficha toma la identidad especial y se dibuja en 
+      color dorado (#FFD700).
+- Líneas 165-182 (tetris_fijar_pieza y ejecutar_efecto_powerup):
+    * Se añadió la invocación del efecto Power-Up al tocar el suelo.
+    * 'CLEAR_ROW': Borra dinámicamente N filas del tablero según la cantidad configurada 
+      en el .brick.
+    * 'BOMB_PIECE': Limpia un área en matriz alrededor del centro de la pieza.
+- Líneas 200-212 (tetris_limpiar_lineas):
+    * Se restauró el borrado de filas completas en el grid estático.
+    * Se añadió la condición lógica: si se eliminan 2 o más filas al mismo tiempo, 
+      se selecciona un Power-Up para ser otorgado en la siguiente pieza que caiga.
+
+-------------------------------------------------------------------------------
+C. ARCHIVO: tetris_remake.brick
+-------------------------------------------------------------------------------
+- Declaración de las 4 rotaciones completas (STATE 1 a STATE 4) para las figuras 
+  I_PIECE, L_PIECE, LL_PIECE, T_PIECE, S_PIECE, Z_PIECE y O_PIECE.
+- Inclusión de directivas COLOR para cada figura (ej. COLOR O_PIECE: FFFF00).
+- Inclusión de directivas CHANCE de aparición ponderada (ej. CHANCE I_PIECE: 15).
+- Inclusión de directivas POWERUP (ej. POWERUP CLEAR_ROW: 3 y POWERUP BOMB_PIECE: 15).
+
+-------------------------------------------------------------------------------
+D. ARCHIVO: tetris_remake.bnf
+-------------------------------------------------------------------------------
+- Se expandió la producción del axioma principal <programa> para incluir las 
+  secciones de personalización.
+- Se añadieron las producciones para <definicion_color>, <definicion_chance>, 
+  <definicion_powerup> y <hex_color>.
+
+===============================================================================
+3. DISTRIBUCIÓN DE TRABAJO Y APORTES POR INTEGRANTE
+===============================================================================
+
+- Integrante 1: [Sebastian Stuar Alzate]
+  * Aporte: Redacción de la gramática extendida en tetris_remake.bnf y completación 
+    geométrica de las 4 rotaciones (STATE 1-4) de todas las figuras en tetris_remake.brick.
+
+- Integrante 2: [David Arango Valencia]
+  * Aporte: Modificación del Lexer y Parser en compiler.py para soportar las nuevas 
+    etiquetas (COLOR, CHANCE, POWERUP) e implementación de la asignación de valores 
+    por defecto (.setdefault) para la retrocompatibilidad.
+
+- Integrante 3: [Juan Andres Agudelo Melquizo]
+  * Aporte: Modificación del motor runtime.py para el dibujado con colores dinámicos en 
+    el canvas/grid y la selección ponderada de figuras mediante random.choices.
+
+- Integrante 4: [Alejandro Londoño Cuervo]
+  * Aporte: Implementación de la lógica de Power-Ups en runtime.py (activación por 
+    limpieza simultánea de >= 2 filas, renderizado en dorado y ejecución de efectos), 
+    grabación del video demostrativo y ensamblaje de la entrega.
+===============================================================================
