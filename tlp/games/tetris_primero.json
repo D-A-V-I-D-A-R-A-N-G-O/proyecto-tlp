@@ -270,5 +270,6 @@
     "I_PIECE": 1,
     "L_PIECE": 1,
     "T_PIECE": 1
-  }
+  },
+  "power_up": {}
 }

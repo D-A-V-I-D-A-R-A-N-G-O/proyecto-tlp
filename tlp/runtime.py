@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-# runtime.py (VERSION CON INTERFAZ GRAFICA USANDO Tkinter y caracteres ASCII unicamente)
-# Adaptado para Python 3 con soporte de colores personalizados por pieza
+# runtime.py (VERSION CON INTERFAZ GRAFICA USANDO Tkinter)
 
 import sys
 import json
 import time
 import random
-# tkinter es la libreria GUI estandar de Python
 import tkinter as tk
 from tkinter import messagebox as tkMessageBox
 
@@ -18,26 +16,26 @@ class Juego:
         self.ancho = config.get('grid_size', [10, 20])[0]
         self.alto = config.get('grid_size', [10, 20])[1]
         
-        # Inicializamos el grid con 0 (vacío)
         self.grid = [[0 for _ in range(self.ancho)] for _ in range(self.alto)]
         self.puntuacion = 0
         self.juego_terminado = False
         
-        # --- Configuracion de la GUI ---
+        # Guardará el powerup listo para activarse en la siguiente pieza
+        self.siguiente_powerup = None
+        self.tipo_powerup_actual = None
+        
+        # --- GUI ---
         self.root = tk.Tk()
         self.root.title("BrickScript - " + self.tipo_juego)
-        # Configurar la accion al cerrar la ventana ('X' de la barra de titulo)
         self.root.protocol("WM_DELETE_WINDOW", self.cerrar_ventana)
         
-        self.taman_celda = 25 # Pixeles por celda
+        self.taman_celda = 25 
         self.ancho_canvas = self.ancho * self.taman_celda
         self.alto_canvas = self.alto * self.taman_celda
         
-        # Canvas para dibujar el juego
         self.canvas = tk.Canvas(self.root, width=self.ancho_canvas, height=self.alto_canvas, bg='#111111')
         self.canvas.pack(side=tk.LEFT, padx=10, pady=10)
 
-        # Marco lateral para la puntuacion y controles
         self.marco_score = tk.Frame(self.root, width=150, height=self.alto_canvas, bg='#222222')
         self.marco_score.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
         
@@ -47,13 +45,12 @@ class Juego:
         self.label_controles = tk.Label(self.marco_score, text="CONTROLES\nFlechas: Mover/Rotar", bg='#222222', fg='gray', font=('Consolas', 10))
         self.label_controles.pack(pady=20, padx=10)
 
-        # Configurar eventos de teclado. Usamos <Key> para capturar cualquier tecla
         self.root.bind('<Key>', self.manejar_input_gui)
         
         if self.tipo_juego == 'TETRIS':
             self.pieza_actual = None
             self.pieza_x, self.pieza_y, self.pieza_rotacion = 0, 0, 0
-            self.color_pieza_actual = '#00FFFF' # Color por defecto
+            self.color_pieza_actual = '#00FFFF'
             self.velocidad_gravedad = 0.4
         
         if self.tipo_juego == 'SNAKE':
@@ -64,10 +61,9 @@ class Juego:
         
         self.timer_gravedad = 0
         self.ejecutar_evento('ON_START')
-        self.timer_id = None # Para controlar el loop de Tkinter
+        self.timer_id = None
 
     def run(self):
-        # Inicia el ciclo principal de juego de Tkinter
         self.root.after(50, self.game_loop) 
         self.root.mainloop() 
 
@@ -76,15 +72,12 @@ class Juego:
             self.mostrar_game_over()
             return
 
-        # Logica de TICK/Gravedad
         self.timer_gravedad += 0.05 
         if self.timer_gravedad >= self.velocidad_gravedad:
             self.timer_gravedad = 0
             self.ejecutar_evento('ON_TICK')
 
         self.dibujar()
-
-        # Programa el siguiente ciclo de juego
         self.timer_id = self.root.after(50, self.game_loop)
         
     def cerrar_ventana(self):
@@ -108,21 +101,20 @@ class Juego:
             elif key == 'RIGHT': self.snake_cambiar_direccion('RIGHT')
 
     def dibujar(self):
-        self.canvas.delete("all") # Borrar todo en cada frame
+        self.canvas.delete("all")
         self.label_score.config(text="PUNTUACION\n" + str(self.puntuacion))
 
-        # Colores por defecto para Snake
         COLOR_SNAKE_CABEZA = '#00FF00' 
         COLOR_SNAKE_CUERPO = '#33CC33' 
         COLOR_FOOD = '#FF0000'      
 
-        # 1. Dibujar la cuadrícula estática (con los colores individuales guardados)
+        # 1. Dibujar grid estática
         for y in range(self.alto):
             for x in range(self.ancho):
                 if self.grid[y][x] != 0:
                      self.dibujar_celda(x, y, self.grid[y][x])
 
-        # 2. Dibujar la pieza actual de Tetris usando su color específico
+        # 2. Dibujar pieza activa
         if self.tipo_juego == 'TETRIS' and self.pieza_actual:
             matriz_pieza = self.pieza_actual[self.pieza_rotacion]
             for y_offset, fila in enumerate(matriz_pieza):
@@ -130,7 +122,7 @@ class Juego:
                     if celda == 1:
                         self.dibujar_celda(self.pieza_x + x_offset, self.pieza_y + y_offset, self.color_pieza_actual)
         
-        # 3. Dibujar Snake y Comida
+        # 3. Dibujar Snake
         if self.tipo_juego == 'SNAKE':
             if self.posicion_comida:
                 x, y = self.posicion_comida
@@ -166,23 +158,30 @@ class Juego:
                     if verbo == 'MOVE' and objeto == 'PLAYER': self.snake_mover_jugador()
                     if verbo == 'GROW': self.snake_crecer()
 
-    # METODOS DE LOGICA DE TETRIS
+    # --- LÓGICA DE TETRIS ---
     def tetris_spawn_pieza(self):
-        # Elegir pieza aleatoria
+        # Asignar powerup acumulado si se eliminaron 2 o más filas anteriormente
+        if self.siguiente_powerup:
+            self.tipo_powerup_actual = self.siguiente_powerup
+            self.siguiente_powerup = None
+            self.color_pieza_actual = '#FFD700' # Color Dorado
+        else:
+            self.tipo_powerup_actual = None
+
         nombres_piezas = list(self.datos_juego['shapes'].keys())
-        pesos_piezas = list(self.datos_juego['shapes_chance'].values())
-        print(nombres_piezas)
-        print(pesos_piezas)
-        nombre_pieza = random.choices(nombres_piezas, weights=pesos_piezas, k=1)
-        print(nombre_pieza)
-        self.pieza_actual = self.datos_juego['shapes'][nombre_pieza[0]]
+        chances = self.datos_juego.get('shapes_chance', {})
+        pesos_piezas = [chances.get(nombre, 1) for nombre in nombres_piezas]
+        
+        nombre_pieza = random.choices(nombres_piezas, weights=pesos_piezas, k=1)[0]
+        self.pieza_actual = self.datos_juego['shapes'][nombre_pieza]
         self.pieza_x, self.pieza_y, self.pieza_rotacion = self.ancho // 2 - 2, 0, 0
-        colores_personalizados = self.datos_juego.get('shapes_color', {})
-        print(colores_personalizados)
-        color_hex = colores_personalizados.get(nombre_pieza[0], '00FFFF')
-        if not color_hex.startswith('#'):
-            color_hex = '#' + color_hex
-        self.color_pieza_actual = color_hex
+        
+        if not self.tipo_powerup_actual:
+            colores_personalizados = self.datos_juego.get('shapes_color', {})
+            color_hex = colores_personalizados.get(nombre_pieza, '00FFFF')
+            if not color_hex.startswith('#'):
+                color_hex = '#' + color_hex
+            self.color_pieza_actual = color_hex
 
         if self.tetris_verificar_colision(self.pieza_x, self.pieza_y, self.pieza_rotacion):
             self.juego_terminado = True
@@ -208,16 +207,35 @@ class Juego:
     def tetris_fijar_pieza(self):
         if self.pieza_actual is None:
             return
+            
         matriz_pieza = self.pieza_actual[self.pieza_rotacion]
         for y_offset, fila in enumerate(matriz_pieza):
             for x_offset, celda in enumerate(fila):
                 if celda == 1:
                     if 0 <= self.pieza_y + y_offset < self.alto and 0 <= self.pieza_x + x_offset < self.ancho:
-                        # Guardamos el color de la pieza en el grid en lugar de un '1' genérico
                         self.grid[self.pieza_y + y_offset][self.pieza_x + x_offset] = self.color_pieza_actual
+        
+        # --- EFECTO DEL POWER-UP ---
+        if hasattr(self, 'tipo_powerup_actual') and self.tipo_powerup_actual:
+            self.ejecutar_efecto_powerup(self.tipo_powerup_actual)
+
         self.pieza_actual = None
         self.tetris_limpiar_lineas()
         self.ejecutar_evento('ON_START')
+
+    def ejecutar_efecto_powerup(self, tipo):
+        if tipo == 'CLEAR_ROW':
+            self.grid.pop()
+            self.grid.insert(0, [0] * self.ancho)
+            self.puntuacion += 200
+        elif tipo == 'BOMB_PIECE':
+            cx, cy = self.pieza_x + 1, self.pieza_y + 1
+            for dy in range(-2, 3):
+                for dx in range(-2, 3):
+                    nx, ny = cx + dx, cy + dy
+                    if 0 <= nx < self.ancho and 0 <= ny < self.alto:
+                        self.grid[ny][nx] = 0
+            self.puntuacion += 150
 
     def tetris_verificar_colision(self, x, y, rotacion):
         if not self.pieza_actual: return False
@@ -234,12 +252,21 @@ class Juego:
         # Una fila está completa si no contiene ningún '0'
         nuevo_grid = [fila for fila in self.grid if 0 in fila]
         lineas_limpias = self.alto - len(nuevo_grid)
+        
         if lineas_limpias > 0:
             self.grid = [[0] * self.ancho for _ in range(lineas_limpias)] + nuevo_grid
-            for _ in range(lineas_limpias): self.ejecutar_evento('ON_LINE_CLEAR')
-            
+            for _ in range(lineas_limpias): 
+                self.ejecutar_evento('ON_LINE_CLEAR')
 
-    # METODOS DE LOGICA DE SNAKE
+            # Si se eliminaron 2 o más filas con una sola ficha, se activa un Power-Up para la Siguiente Ficha
+            if lineas_limpias >= 2:
+                power_ups = self.datos_juego.get('power_up', {})
+                if power_ups:
+                    nombres_pu = list(power_ups.keys())
+                    pesos_pu = list(power_ups.values())
+                    self.siguiente_powerup = random.choices(nombres_pu, weights=pesos_pu, k=1)[0]
+
+    # --- LÓGICA DE SNAKE ---
     def snake_spawn_jugador(self, accion):
         coords = accion['params'][0] if accion['params'] else [self.ancho // 2, self.alto // 2]
         self.serpiente_cuerpo = [(coords[0], coords[1])]
@@ -286,7 +313,6 @@ class Juego:
     def snake_crecer(self):
         pass
 
-    # METODOS DE SALIDA
     def mostrar_game_over(self):
         tkMessageBox.showinfo("Juego Terminado", "Puntuacion Final: " + str(self.puntuacion))
         self.root.destroy()

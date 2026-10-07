@@ -1,6 +1,5 @@
 # compiler.py
-# Compilador universal para BrickScript (Version Final y Depurada - Adaptado para Python 3)
-# Uso: python3 compiler.py <archivo_entrada.brick>
+# Compilador universal para BrickScript (Versión Final con Soporte de PowerUps)
 
 import sys
 import re
@@ -11,11 +10,20 @@ def lexer(codigo_fuente):
     token_regex = r'\b[A-F0-9]{6}\b|\b[A-Z][A-Z0-9_]*\b|\d+|[\[\](),:]'
     tokens = re.findall(token_regex, codigo_fuente)
     return tokens
+
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.posicion = 0
-        self.ast = {"tipo_juego": None, "config": {}, "shapes": {}, "events": {}, "shapes_color": {}, "shapes_chance":{}}
+        self.ast = {
+            "tipo_juego": None, 
+            "config": {}, 
+            "shapes": {}, 
+            "events": {}, 
+            "shapes_color": {}, 
+            "shapes_chance": {}, 
+            "power_up": {}
+        }
 
     def parse(self):
         while self.posicion < len(self.tokens):
@@ -32,6 +40,8 @@ class Parser:
                 self.parsear_probabilidad_shape()
             elif token_actual == 'COLOR':
                 self.parsear_color_shape()
+            elif token_actual == 'POWERUP':
+                self.parsear_powerup()
             elif token_actual == 'ON':
                 self.parsear_evento()
             else:
@@ -80,6 +90,13 @@ class Parser:
         probabilidad = int(self.consumir())
         self.ast['shapes_chance'][nombre_shape_chance] = probabilidad
 
+    def parsear_powerup(self):
+        self.consumir('POWERUP')
+        nombre_powerup = self.consumir()
+        self.consumir(':')
+        valor = int(self.consumir())
+        self.ast['power_up'][nombre_powerup] = valor
+
     def parsear_shape(self):
         self.consumir('DEFINE')
         self.consumir('SHAPE')
@@ -103,13 +120,10 @@ class Parser:
         self.consumir('END')
         self.ast['shapes'][nombre_shape] = estados
         
+        # Asignación segura por defecto
         self.ast['shapes_color'].setdefault(nombre_shape, "FFFF00")
         self.ast['shapes_chance'].setdefault(nombre_shape, 1)
 
-        
-        
-    
-    # --- FUNCION CORREGIDA ---
     def parsear_evento(self):
         self.consumir('ON')
         nombre_evento = 'ON_' + self.consumir()
@@ -140,7 +154,6 @@ class Parser:
             acciones.append({'accion': verbo, 'objeto': objeto, 'params': params})
         self.consumir('END')
         self.ast['events'][nombre_evento] = acciones
-        
 
 def generar_codigo(ast, archivo_salida):
     with open(archivo_salida, 'w') as f:
