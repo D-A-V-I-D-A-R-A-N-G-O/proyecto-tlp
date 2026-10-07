@@ -551,7 +551,7 @@
     "O_PIECE": "FFFF00"
   },
   "shapes_chance": {
-    "I_PIECE": 15000,
+    "I_PIECE": 15,
     "LL_PIECE": 15,
     "L_PIECE": 15,
     "T_PIECE": 15,
@@ -560,7 +560,7 @@
     "O_PIECE": 15
   },
   "power_up": {
-    "BOMB_PIECE": 10,
-    "CLEAR_ROW": 5
+    "CLEAR_ROW": 3,
+    "BOMB_PIECE": 15
   }
 }
