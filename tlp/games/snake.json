@@ -107,5 +107,12 @@
         "params": []
       }
     ]
-  }
+  },
+  "shapes_color": {
+    "PIXEL": "FFFF00"
+  },
+  "shapes_chance": {
+    "PIXEL": 1
+  },
+  "power_up": {}
 }

@@ -95,6 +95,6 @@ D. ARCHIVO: tetris_remake.bnf
 
 - Integrante 4: [Alejandro Londoño Cuervo]
   * Aporte: Implementación de la lógica de Power-Ups en runtime.py (activación por 
-    limpieza simultánea de >= 2 filas, renderizado en dorado y ejecución de efectos), 
+    limpieza simultánea de >= 2 filas, renderizado en blanco y ejecución de efectos), 
     grabación del video demostrativo y ensamblaje de la entrega.
 ===============================================================================

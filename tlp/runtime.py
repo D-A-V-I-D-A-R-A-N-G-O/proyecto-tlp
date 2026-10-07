@@ -162,7 +162,7 @@ class Juego:
         if self.siguiente_powerup:
             self.tipo_powerup_actual = self.siguiente_powerup
             self.siguiente_powerup = None
-            self.color_pieza_actual = '#FFD700' # Color Dorado
+            self.color_pieza_actual = "#FFFFFF" # Color Dorado
         else:
             self.tipo_powerup_actual = None
 

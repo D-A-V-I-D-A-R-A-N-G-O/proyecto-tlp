@@ -548,10 +548,10 @@
     "T_PIECE": "800080",
     "S_PIECE": "00FF00",
     "Z_PIECE": "FF0000",
-    "O_PIECE": "FFFF00"
+    "O_PIECE": "FFF000"
   },
   "shapes_chance": {
-    "I_PIECE": 15,
+    "I_PIECE": 15000,
     "LL_PIECE": 15,
     "L_PIECE": 15,
     "T_PIECE": 15,
