@@ -14,7 +14,7 @@ DEFINE SHAPE I_PIECE:
     [0, 0, 0, 0]
     [1, 1, 1, 1]
     [0, 0, 0, 0]
-    [0, 0, 0, 0]
+    [0, 0, 0, 0]    
 END
 
 DEFINE SHAPE LL_PIECE:
@@ -115,21 +115,8 @@ END
 
 DEFINE SHAPE O_PIECE:
   STATE 1:
-    [1, 1, 0]
-    [1, 1, 0]
-    [0, 0, 0]
-  STATE 2:
-    [1, 1, 0]
-    [1, 1, 0]
-    [0, 0, 0]
-  STATE 3:
-    [1, 1, 0]
-    [1, 1, 0]
-    [0, 0, 0]
-  STATE 4:
-    [1, 1, 0]
-    [1, 1, 0]
-    [0, 0, 0]
+    [1, 1]
+    [1, 1]
 END
 
 # Definición de probabilidades de Power-Ups
@@ -153,7 +140,7 @@ CHANCE S_PIECE: 15
 CHANCE T_PIECE: 15
 CHANCE L_PIECE: 15
 CHANCE LL_PIECE: 15
-CHANCE I_PIECE: 15000
+CHANCE I_PIECE: 15
 
 # --- Logica y Reglas ---
 ON START:

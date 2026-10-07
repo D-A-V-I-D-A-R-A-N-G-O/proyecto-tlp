@@ -166,7 +166,7 @@ class Juego:
         else:
             self.tipo_powerup_actual = None
 
-        nombres_piezas = list(self.datos_juego['shapes'].keys())
+        nombres_piezas = list(self.datos_juego['shapes_chance'].keys())
         chances = self.datos_juego.get('shapes_chance', {})
         pesos_piezas = [chances.get(nombre, 1) for nombre in nombres_piezas]
         
@@ -176,9 +176,8 @@ class Juego:
         
         if not self.tipo_powerup_actual:
             colores_personalizados = self.datos_juego.get('shapes_color', {})
-            color_hex = colores_personalizados.get(nombre_pieza, '00FFFF')
-            if not color_hex.startswith('#'):
-                color_hex = '#' + color_hex
+            color_hex = colores_personalizados.get(nombre_pieza)
+            color_hex = '#' + color_hex
             self.color_pieza_actual = color_hex
 
         if self.tetris_verificar_colision(self.pieza_x, self.pieza_y, self.pieza_rotacion):
