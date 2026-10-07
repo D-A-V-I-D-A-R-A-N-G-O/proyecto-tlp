@@ -20,7 +20,6 @@ class Juego:
         self.puntuacion = 0
         self.juego_terminado = False
         
-        # Guardará el powerup listo para activarse en la siguiente pieza
         self.siguiente_powerup = None
         self.tipo_powerup_actual = None
         
@@ -160,7 +159,6 @@ class Juego:
 
     # --- LÓGICA DE TETRIS ---
     def tetris_spawn_pieza(self):
-        # Asignar powerup acumulado si se eliminaron 2 o más filas anteriormente
         if self.siguiente_powerup:
             self.tipo_powerup_actual = self.siguiente_powerup
             self.siguiente_powerup = None
@@ -224,10 +222,18 @@ class Juego:
         self.ejecutar_evento('ON_START')
 
     def ejecutar_efecto_powerup(self, tipo):
+        power_ups = self.datos_juego.get('power_up', {})
+        
         if tipo == 'CLEAR_ROW':
-            self.grid.pop()
-            self.grid.insert(0, [0] * self.ancho)
-            self.puntuacion += 200
+            # Toma la cantidad configurada en el .brick
+            filas_a_borrar = power_ups.get('CLEAR_ROW', 2)
+            
+            for _ in range(filas_a_borrar):
+                self.grid.pop()
+                self.grid.insert(0, [0] * self.ancho)
+                
+            self.puntuacion += 100 * filas_a_borrar
+
         elif tipo == 'BOMB_PIECE':
             cx, cy = self.pieza_x + 1, self.pieza_y + 1
             for dy in range(-2, 3):
@@ -249,7 +255,6 @@ class Juego:
         return False
 
     def tetris_limpiar_lineas(self):
-        # Una fila está completa si no contiene ningún '0'
         nuevo_grid = [fila for fila in self.grid if 0 in fila]
         lineas_limpias = self.alto - len(nuevo_grid)
         
@@ -258,13 +263,11 @@ class Juego:
             for _ in range(lineas_limpias): 
                 self.ejecutar_evento('ON_LINE_CLEAR')
 
-            # Si se eliminaron 2 o más filas con una sola ficha, se activa un Power-Up para la Siguiente Ficha
             if lineas_limpias >= 2:
                 power_ups = self.datos_juego.get('power_up', {})
                 if power_ups:
                     nombres_pu = list(power_ups.keys())
-                    pesos_pu = list(power_ups.values())
-                    self.siguiente_powerup = random.choices(nombres_pu, weights=pesos_pu, k=1)[0]
+                    self.siguiente_powerup = random.choice(nombres_pu)
 
     # --- LÓGICA DE SNAKE ---
     def snake_spawn_jugador(self, accion):

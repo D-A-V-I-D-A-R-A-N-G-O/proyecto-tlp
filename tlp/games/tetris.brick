@@ -133,14 +133,9 @@ DEFINE SHAPE O_PIECE:
 END
 
 # Definición de probabilidades de Power-Ups
-POWERUP BOMB_PIECE: 10
-POWERUP CLEAR_ROW: 5
-
-# Aparecer un power-up al limpiar líneas
-ON LINE_CLEAR:
-  INCREASE_SCORE 100
-  SPAWN POWERUP AT RANDOM
-END
+# Borrará 3 filas cuando se active este Power-Up
+POWERUP CLEAR_ROW: 3
+POWERUP BOMB_PIECE: 15
 
 # --- Definicion de los colores de las Piezas ---
 COLOR O_PIECE: FFFF00

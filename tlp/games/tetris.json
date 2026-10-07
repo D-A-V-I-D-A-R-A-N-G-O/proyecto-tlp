@@ -483,13 +483,6 @@
     ]
   },
   "events": {
-    "ON_LINE_CLEAR": [
-      {
-        "accion": "INCREASE_SCORE",
-        "objeto": "100",
-        "params": []
-      }
-    ],
     "ON_START": [
       {
         "accion": "SPAWN",
@@ -504,6 +497,13 @@
         "params": [
           "DOWN"
         ]
+      }
+    ],
+    "ON_LINE_CLEAR": [
+      {
+        "accion": "INCREASE_SCORE",
+        "objeto": "100",
+        "params": []
       }
     ],
     "ON_KEY_LEFT": [
@@ -551,7 +551,7 @@
     "O_PIECE": "FFFF00"
   },
   "shapes_chance": {
-    "I_PIECE": 15,
+    "I_PIECE": 15000,
     "LL_PIECE": 15,
     "L_PIECE": 15,
     "T_PIECE": 15,
