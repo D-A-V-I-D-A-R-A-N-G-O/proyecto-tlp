@@ -102,8 +102,9 @@ class Parser:
             estados.append(matriz)
         self.consumir('END')
         self.ast['shapes'][nombre_shape] = estados
-        self.ast['shapes_color'][nombre_shape] = "FFFF00"
-        self.ast['shapes_chance'][nombre_shape] = 1
+        
+        self.ast['shapes_color'].setdefault(nombre_shape, "FFFF00")
+        self.ast['shapes_chance'].setdefault(nombre_shape, 1)
 
         
         

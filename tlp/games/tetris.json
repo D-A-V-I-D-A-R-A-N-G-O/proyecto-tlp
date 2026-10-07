@@ -551,7 +551,7 @@
     "O_PIECE": "FFFF00"
   },
   "shapes_chance": {
-    "I_PIECE": 15,
+    "I_PIECE": 100,
     "LL_PIECE": 15,
     "L_PIECE": 15,
     "T_PIECE": 15,

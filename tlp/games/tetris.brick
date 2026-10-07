@@ -143,14 +143,13 @@ COLOR LL_PIECE: 0000FF
 COLOR I_PIECE: 00FFFF
 
 # --- Definicion de las probabilidades de las Piezas ---
-# --- Distribucion de Probabilidad de las Piezas (Suma = 100) ---
 CHANCE O_PIECE: 15
 CHANCE Z_PIECE: 15
 CHANCE S_PIECE: 15
 CHANCE T_PIECE: 15
 CHANCE L_PIECE: 15
 CHANCE LL_PIECE: 15
-CHANCE I_PIECE: 100
+CHANCE I_PIECE: 15
 
 # --- Logica y Reglas ---
 ON START:
