@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # runtime.py (VERSION CON INTERFAZ GRAFICA USANDO Tkinter)
 
 import sys
@@ -9,6 +8,8 @@ import tkinter as tk
 from tkinter import messagebox as tkMessageBox
 
 class Juego:
+    PALETA_NYAN = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3']
+
     def __init__(self, datos_juego):
         self.datos_juego = datos_juego
         self.tipo_juego = self.datos_juego.get('tipo_juego', 'TETRIS')
@@ -56,8 +57,24 @@ class Juego:
             self.serpiente_cuerpo = []
             self.serpiente_direccion = (1, 0)
             self.posicion_comida = None
-            self.velocidad_gravedad = 0.15
-        
+            self.posicion_veneno = None
+            self.posicion_nube = None
+            
+            # Cargar configuración de niveles
+            levels_cfg = self.datos_juego.get('levels', {})
+            self.nivel_actual = levels_cfg.get('current', 'BABY')
+            nivel_data = levels_cfg.get('configurations', {}).get(self.nivel_actual, {})
+            
+            tick_ms = nivel_data.get('tick_speed', 150)
+            self.velocidad_gravedad = tick_ms / 1000.0
+            self.enable_poison = nivel_data.get('poison', False)
+            self.enable_clouds = nivel_data.get('clouds', False)
+
+            # Cargar geometrías desde el JSON
+            shapes = self.datos_juego.get('shapes', {})
+            self.forma_cuerpo = shapes.get('SNAKE_BODY', {}).get('geometry', 'RECTANGLE')
+            self.forma_cabeza = shapes.get('SNAKE_HEAD', {}).get('geometry', 'RECTANGLE')
+
         self.timer_gravedad = 0
         self.ejecutar_evento('ON_START')
         self.timer_id = None
@@ -103,17 +120,13 @@ class Juego:
         self.canvas.delete("all")
         self.label_score.config(text="PUNTUACION\n" + str(self.puntuacion))
 
-        COLOR_SNAKE_CABEZA = '#00FF00' 
-        COLOR_SNAKE_CUERPO = '#33CC33' 
-        COLOR_FOOD = '#FF0000'      
-
-        # 1. Dibujar grid estática
+        # 1. Dibujar grid estática (Tetris)
         for y in range(self.alto):
             for x in range(self.ancho):
                 if self.grid[y][x] != 0:
                      self.dibujar_celda(x, y, self.grid[y][x])
 
-        # 2. Dibujar pieza activa
+        # 2. Dibujar pieza activa (Tetris)
         if self.tipo_juego == 'TETRIS' and self.pieza_actual:
             matriz_pieza = self.pieza_actual[self.pieza_rotacion]
             for y_offset, fila in enumerate(matriz_pieza):
@@ -124,19 +137,41 @@ class Juego:
         # 3. Dibujar Snake
         if self.tipo_juego == 'SNAKE':
             if self.posicion_comida:
-                x, y = self.posicion_comida
-                self.dibujar_celda(x, y, COLOR_FOOD)
+                self.dibujar_celda(self.posicion_comida[0], self.posicion_comida[1], '#FF0000', "CIRCULAR")
+            
+            if self.enable_poison and self.posicion_veneno:
+                self.dibujar_celda(self.posicion_veneno[0], self.posicion_veneno[1], '#A020F0', "TRIANGULAR")
+
+            if self.enable_clouds and self.posicion_nube:
+                self.dibujar_celda(self.posicion_nube[0], self.posicion_nube[1], '#87CEEB', "RECTANGLE")
+
             for i, segmento in enumerate(self.serpiente_cuerpo):
                 x, y = segmento
-                color = COLOR_SNAKE_CABEZA if i == 0 else COLOR_SNAKE_CUERPO
-                self.dibujar_celda(x, y, color)
+                if i == 0:
+                    forma = "NYAN_HEAD" if self.nivel_actual == "NYAN_CAT" else self.forma_cabeza
+                    color = "#FFC0CB" if self.nivel_actual == "NYAN_CAT" else '#00FF00'
+                else:
+                    forma = "CIRCULAR" if self.nivel_actual == "NYAN_CAT" else self.forma_cuerpo
+                    color = self.PALETA_NYAN[i % len(self.PALETA_NYAN)] if self.nivel_actual == "NYAN_CAT" else '#33CC33'
 
-    def dibujar_celda(self, x, y, color):
+                self.dibujar_celda(x, y, color, forma)
+
+    def dibujar_celda(self, x, y, color, forma="RECTANGLE"):
         ts = self.taman_celda 
         x1, y1 = x * ts, y * ts
         x2, y2 = x1 + ts, y1 + ts
-        R = "#000000"
-        self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline=R)
+        
+        if forma == "CIRCULAR":
+            self.canvas.create_oval(x1+2, y1+2, x2-2, y2-2, fill=color, outline="#000000")
+        elif forma == "TRIANGULAR":
+            points = [x1 + ts//2, y1 + 2, x1 + 2, y2 - 2, x2 - 2, y2 - 2]
+            self.canvas.create_polygon(points, fill=color, outline="#000000")
+        elif forma == "NYAN_HEAD":
+            self.canvas.create_oval(x1, y1, x2, y2, fill="#FFC0CB", outline="#000000")
+            self.canvas.create_oval(x1+5, y1+5, x1+9, y1+9, fill="#000000")
+            self.canvas.create_oval(x2-9, y1+5, x2-5, y1+9, fill="#000000")
+        else: # RECTANGLE por defecto
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="#000000")
 
     def ejecutar_evento(self, nombre_evento):
         if nombre_evento in self.datos_juego['events']:
@@ -144,6 +179,8 @@ class Juego:
                 verbo, objeto = accion.get('accion'), accion.get('objeto')
                 
                 if verbo == 'INCREASE_SCORE': self.puntuacion += int(objeto)
+                if verbo == 'DECREASE_SCORE': 
+                    self.puntuacion = max(0, self.puntuacion - int(objeto))
                 if verbo == 'GAME_OVER': self.juego_terminado = True
 
                 if self.tipo_juego == 'TETRIS':
@@ -154,19 +191,21 @@ class Juego:
                 if self.tipo_juego == 'SNAKE':
                     if verbo == 'SPAWN' and objeto == 'PLAYER': self.snake_spawn_jugador(accion)
                     if verbo == 'SPAWN' and objeto == 'FOOD': self.snake_spawn_comida()
+                    if verbo == 'SPAWN' and objeto == 'POISON_FOOD': self.snake_spawn_veneno()
+                    if verbo == 'SPAWN' and objeto == 'CLOUD_OBSTACLE': self.snake_spawn_nube()
                     if verbo == 'MOVE' and objeto == 'PLAYER': self.snake_mover_jugador()
-                    if verbo == 'GROW': self.snake_crecer()
+                    if verbo == 'GROW': self.snake_crecer(accion.get('params', [1])[0])
 
     # --- LÓGICA DE TETRIS ---
     def tetris_spawn_pieza(self):
         if self.siguiente_powerup:
             self.tipo_powerup_actual = self.siguiente_powerup
             self.siguiente_powerup = None
-            self.color_pieza_actual = "#FFFFFF" # Color Dorado
+            self.color_pieza_actual = '#FFD700'
         else:
             self.tipo_powerup_actual = None
 
-        nombres_piezas = list(self.datos_juego['shapes_chance'].keys())
+        nombres_piezas = list(self.datos_juego['shapes'].keys())
         chances = self.datos_juego.get('shapes_chance', {})
         pesos_piezas = [chances.get(nombre, 1) for nombre in nombres_piezas]
         
@@ -176,8 +215,9 @@ class Juego:
         
         if not self.tipo_powerup_actual:
             colores_personalizados = self.datos_juego.get('shapes_color', {})
-            color_hex = colores_personalizados.get(nombre_pieza)
-            color_hex = '#' + color_hex
+            color_hex = colores_personalizados.get(nombre_pieza, '00FFFF')
+            if not color_hex.startswith('#'):
+                color_hex = '#' + color_hex
             self.color_pieza_actual = color_hex
 
         if self.tetris_verificar_colision(self.pieza_x, self.pieza_y, self.pieza_rotacion):
@@ -202,8 +242,7 @@ class Juego:
             self.pieza_rotacion = nueva_rotacion
 
     def tetris_fijar_pieza(self):
-        if self.pieza_actual is None:
-            return
+        if self.pieza_actual is None: return
             
         matriz_pieza = self.pieza_actual[self.pieza_rotacion]
         for y_offset, fila in enumerate(matriz_pieza):
@@ -212,7 +251,6 @@ class Juego:
                     if 0 <= self.pieza_y + y_offset < self.alto and 0 <= self.pieza_x + x_offset < self.ancho:
                         self.grid[self.pieza_y + y_offset][self.pieza_x + x_offset] = self.color_pieza_actual
         
-        # --- EFECTO DEL POWER-UP ---
         if hasattr(self, 'tipo_powerup_actual') and self.tipo_powerup_actual:
             self.ejecutar_efecto_powerup(self.tipo_powerup_actual)
 
@@ -222,17 +260,12 @@ class Juego:
 
     def ejecutar_efecto_powerup(self, tipo):
         power_ups = self.datos_juego.get('power_up', {})
-        
         if tipo == 'CLEAR_ROW':
-            # Toma la cantidad configurada en el .brick
             filas_a_borrar = power_ups.get('CLEAR_ROW', 2)
-            
             for _ in range(filas_a_borrar):
                 self.grid.pop()
                 self.grid.insert(0, [0] * self.ancho)
-                
             self.puntuacion += 100 * filas_a_borrar
-
         elif tipo == 'BOMB_PIECE':
             cx, cy = self.pieza_x + 1, self.pieza_y + 1
             for dy in range(-2, 3):
@@ -256,11 +289,9 @@ class Juego:
     def tetris_limpiar_lineas(self):
         nuevo_grid = [fila for fila in self.grid if 0 in fila]
         lineas_limpias = self.alto - len(nuevo_grid)
-        
         if lineas_limpias > 0:
             self.grid = [[0] * self.ancho for _ in range(lineas_limpias)] + nuevo_grid
-            for _ in range(lineas_limpias): 
-                self.ejecutar_evento('ON_LINE_CLEAR')
+            for _ in range(lineas_limpias): self.ejecutar_evento('ON_LINE_CLEAR')
 
             if lineas_limpias >= 2:
                 power_ups = self.datos_juego.get('power_up', {})
@@ -279,6 +310,22 @@ class Juego:
             x, y = random.randint(0, self.ancho - 1), random.randint(0, self.alto - 1)
             if (x, y) not in self.serpiente_cuerpo:
                 self.posicion_comida = (x, y)
+                break
+
+    def snake_spawn_veneno(self):
+        if not self.enable_poison: return
+        while True:
+            x, y = random.randint(0, self.ancho - 1), random.randint(0, self.alto - 1)
+            if (x, y) not in self.serpiente_cuerpo and (x, y) != self.posicion_comida:
+                self.posicion_veneno = (x, y)
+                break
+
+    def snake_spawn_nube(self):
+        if not self.enable_clouds: return
+        while True:
+            x, y = random.randint(0, self.ancho - 1), random.randint(0, self.alto - 1)
+            if (x, y) not in self.serpiente_cuerpo and (x, y) != self.posicion_comida:
+                self.posicion_nube = (x, y)
                 break
                 
     def snake_mover_jugador(self):
@@ -299,6 +346,15 @@ class Juego:
         
         if nueva_cabeza == self.posicion_comida:
             self.ejecutar_evento('ON_EAT_FOOD')
+        elif self.enable_poison and nueva_cabeza == self.posicion_veneno:
+            self.ejecutar_evento('ON_EAT_POISON')
+            self.serpiente_cuerpo.pop()
+        elif self.enable_clouds and nueva_cabeza == self.posicion_nube:
+            if self.puntuacion == 0 and self.nivel_actual == "NYAN_CAT":
+                self.juego_terminado = True
+            else:
+                self.ejecutar_evento('ON_COLLISION_CLOUD')
+            self.serpiente_cuerpo.pop()
         else:
             self.serpiente_cuerpo.pop()
 
@@ -312,8 +368,11 @@ class Juego:
         elif direccion == 'RIGHT' and self.serpiente_direccion[0] != -1:
             self.serpiente_direccion = (1, 0)
 
-    def snake_crecer(self):
-        pass
+    def snake_crecer(self, cantidad=1):
+        if self.serpiente_cuerpo:
+            cola = self.serpiente_cuerpo[-1]
+            for _ in range(int(cantidad)):
+                self.serpiente_cuerpo.append(cola)
 
     def mostrar_game_over(self):
         tkMessageBox.showinfo("Juego Terminado", "Puntuacion Final: " + str(self.puntuacion))

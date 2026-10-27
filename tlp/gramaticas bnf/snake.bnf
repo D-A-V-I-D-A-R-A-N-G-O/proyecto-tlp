@@ -1,33 +1,48 @@
-<programa> ::= <tipo_juego> <grid> <definiciones> <eventos>
+<programa> ::= <tipo_juego> <grid> <config_niveles> <definiciones_shape> <eventos>
 
 <tipo_juego> ::= "GAME_TYPE" "SNAKE"
 <grid>       ::= "GAME_GRID" "(" <numero> "," <numero> ")"
-<definiciones> ::= <definicion_shape> | <definicion_shape> <definiciones>
-<eventos>    ::= <evento> | <evento> <eventos>
 
-<definicion_shape> ::= "DEFINE" "SHAPE" <identificador> ":" <estados> "END"
-<estados>          ::= <estado> | <estado> <estados>
-<estado>           ::= "STATE" <numero> ":" <matriz>
-<matriz>           ::= <fila> | <fila> <matriz>
-<fila>             ::= "[" <valores_fila> "]"
-<valores_fila>     ::= <numero> | <numero> "," <valores_fila>
+<config_niveles> ::= "LEVELS" ":" <lista_niveles> "END" | e
+<lista_niveles>  ::= <definicion_nivel> | <definicion_nivel> <lista_niveles>
+<definicion_nivel> ::= "LEVEL" <tipo_nivel> ":" <propiedades_nivel> "END"
+<tipo_nivel>       ::= "BABY" | "ENTUSIASTA" | "NYAN_CAT"
 
-<evento>         ::= "ON" <nombre_evento_snake> ":" <acciones_snake> "END"
-<nombre_evento_snake> ::= "START" | "TICK" | "EAT_FOOD" | "COLLISION_WALL" | "COLLISION_SELF" | "KEY_UP" | "KEY_DOWN" | "KEY_LEFT" | "KEY_RIGHT"
-<acciones_snake>     ::= <accion_snake> | <accion_snake> <acciones_snake>
+<propiedades_nivel> ::= <propiedad_nivel> | <propiedad_nivel> <propiedades_nivel>
+<propiedad_nivel>   ::= "TICK_SPEED" <numero>
+                      | "ENABLE_POISON" <booleano>
+                      | "ENABLE_CLOUDS" <booleano>
+                      | "INVINCIBILITY_TIME" <numero>
 
-<accion_snake> ::= <accion_spawn_jugador> | <accion_spawn_comida> | <accion_mover> | <accion_direccion> | <accion_puntos> | <accion_crecer> | <accion_gameover>
-<accion_spawn_jugador> ::= "SPAWN" "PLAYER" "AT" <coordenadas>
-<accion_spawn_comida>  ::= "SPAWN" "FOOD" "AT" "RANDOM"
-<accion_mover>         ::= "MOVE" "PLAYER" "FORWARD"
-<accion_direccion>     ::= "SET_DIRECTION" <direccion>
-<accion_puntos>        ::= "INCREASE_SCORE" <numero>
-<accion_crecer>        ::= "GROW" "PLAYER" <numero>
-<accion_gameover>      ::= "GAME_OVER"
+<definiciones_shape> ::= <definicion_shape> | <definicion_shape> <definiciones_shape>
+<definicion_shape>   ::= "DEFINE" "SHAPE" <identificador> ":" <propiedades_shape> "END"
+<propiedades_shape>  ::= <propiedad_shape> | <propiedad_shape> <propiedades_shape>
+<propiedad_shape>    ::= "GEOMETRY" <tipo_geometria>
+                       | "COLOR" <hex_color>
 
-<coordenadas>   ::= "(" <numero> "," <numero> ")"
+<tipo_geometria>     ::= "RECTANGLE" | "CIRCULAR" | "TRIANGULAR" | "NYAN_HEAD"
+
+<eventos> ::= <evento> | <evento> <eventos>
+<evento>  ::= "ON" <nombre_evento_snake> ":" <acciones_snake> "END"
+<nombre_evento_snake> ::= "START" | "TICK" | "EAT_FOOD" | "EAT_POISON" | "COLLISION_WALL" | "COLLISION_SELF" | "COLLISION_CLOUD" | "KEY_UP" | "KEY_DOWN" | "KEY_LEFT" | "KEY_RIGHT"
+
+<acciones_snake> ::= <accion_snake> | <accion_snake> <acciones_snake>
+<accion_snake>  ::= "SPAWN" <objeto_spawn> <posicion_spawn>
+                  | "MOVE" "PLAYER" "FORWARD"
+                  | "SET_DIRECTION" <direccion>
+                  | "INCREASE_SCORE" <numero>
+                  | "DECREASE_SCORE" <numero>
+                  | "GROW" "PLAYER" <numero>
+                  | "GAME_OVER"
+
+<objeto_spawn>   ::= "PLAYER" | "FOOD" | "POISON_FOOD" | "CLOUD_OBSTACLE" | "INVINCIBILITY_FOOD"
+<posicion_spawn> ::= "AT" "RANDOM" | "AT" "(" <numero> "," <numero> ")"
+
 <direccion>     ::= "UP" | "DOWN" | "LEFT" | "RIGHT"
+<booleano>      ::= "TRUE" | "FALSE"
 <identificador> ::= <letra> | <letra> <identificador>
 <numero>        ::= <digito> | <digito> <numero>
+<hex_color>     ::= <hex_digit> <hex_digit> <hex_digit> <hex_digit> <hex_digit> <hex_digit>
 <letra>         ::= "A"..."Z" | "_"
 <digito>        ::= "0"..."9"
+<hex_digit>     ::= "0"..."9" | "A"..."F"

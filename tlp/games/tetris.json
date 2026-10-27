@@ -504,5 +504,28 @@
   "power_up": {
     "CLEAR_ROW": 3,
     "BOMB_PIECE": 15
+  },
+  "levels": {
+    "current": "BABY",
+    "configurations": {
+      "BABY": {
+        "tick_speed": 150,
+        "poison": false,
+        "clouds": false,
+        "invincibility_time": 0
+      },
+      "ENTUSIASTA": {
+        "tick_speed": 100,
+        "poison": true,
+        "clouds": false,
+        "invincibility_time": 5
+      },
+      "NYAN_CAT": {
+        "tick_speed": 60,
+        "poison": true,
+        "clouds": true,
+        "invincibility_time": 8
+      }
+    }
   }
 }

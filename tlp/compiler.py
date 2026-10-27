@@ -1,12 +1,11 @@
-# compiler.py
-# Compilador universal para BrickScript (Versión Final con Soporte de PowerUps)
-
 import sys
 import re
 import json
 
 def lexer(codigo_fuente):
+    # Eliminar comentarios (# ...)
     codigo_fuente = re.sub(r'#.*', '', codigo_fuente)
+    # Tokenizer: Hexadecimales de 6 dígitos, palabras clave, números y símbolos
     token_regex = r'\b[A-F0-9]{6}\b|\b[A-Z][A-Z0-9_]*\b|\d+|[\[\](),:]'
     tokens = re.findall(token_regex, codigo_fuente)
     return tokens
@@ -22,7 +21,15 @@ class Parser:
             "events": {}, 
             "shapes_color": {}, 
             "shapes_chance": {}, 
-            "power_up": {}
+            "power_up": {},
+            "levels": {
+                "current": "BABY",
+                "configurations": {
+                    "BABY": {"tick_speed": 150, "poison": False, "clouds": False, "invincibility_time": 0},
+                    "ENTUSIASTA": {"tick_speed": 100, "poison": True, "clouds": False, "invincibility_time": 5},
+                    "NYAN_CAT": {"tick_speed": 60, "poison": True, "clouds": True, "invincibility_time": 8}
+                }
+            }
         }
 
     def parse(self):
@@ -32,6 +39,8 @@ class Parser:
                 self.parsear_tipo_juego()
             elif token_actual == 'GAME_GRID':
                 self.parsear_grid()
+            elif token_actual == 'LEVELS':
+                self.parsear_niveles()
             elif token_actual == 'DEFINE':
                 self.parsear_shape()
             elif token_actual == 'GAME_COLOR':
@@ -72,6 +81,37 @@ class Parser:
         self.consumir(')')
         self.ast['config']['grid_size'] = [ancho, alto]
 
+    def parsear_niveles(self):
+        self.consumir('LEVELS')
+        self.consumir(':')
+        while self.posicion < len(self.tokens) and self.tokens[self.posicion] == 'LEVEL':
+            self.consumir('LEVEL')
+            nombre_nivel = self.consumir()
+            self.consumir(':')
+            
+            # Establecemos el último nivel declarado como nivel activo predeterminado
+            self.ast['levels']['current'] = nombre_nivel
+            if nombre_nivel not in self.ast['levels']['configurations']:
+                self.ast['levels']['configurations'][nombre_nivel] = {
+                    "tick_speed": 100, "poison": True, "clouds": False, "invincibility_time": 0
+                }
+
+            while self.posicion < len(self.tokens) and self.tokens[self.posicion] != 'END':
+                prop = self.consumir()
+                if prop == 'TICK_SPEED':
+                    self.ast['levels']['configurations'][nombre_nivel]['tick_speed'] = int(self.consumir())
+                elif prop == 'ENABLE_POISON':
+                    val = self.consumir()
+                    self.ast['levels']['configurations'][nombre_nivel]['poison'] = (val == 'TRUE')
+                elif prop == 'ENABLE_CLOUDS':
+                    val = self.consumir()
+                    self.ast['levels']['configurations'][nombre_nivel]['clouds'] = (val == 'TRUE')
+                elif prop == 'INVINCIBILITY_TIME':
+                    self.ast['levels']['configurations'][nombre_nivel]['invincibility_time'] = int(self.consumir())
+
+            self.consumir('END')
+        self.consumir('END')
+
     def parsear_color(self):
         self.consumir('GAME_COLOR')
         self.ast['config']['color'] = self.consumir()
@@ -102,26 +142,46 @@ class Parser:
         self.consumir('SHAPE')
         nombre_shape = self.consumir()
         self.consumir(':')
-        estados = []
-        while self.posicion < len(self.tokens) and self.tokens[self.posicion] == 'STATE':
-            self.consumir('STATE')
-            self.consumir()
-            self.consumir(':')
-            matriz = []
-            while self.posicion < len(self.tokens) and self.tokens[self.posicion] == '[':
-                fila = []
-                self.consumir('[')
-                while self.tokens[self.posicion] != ']':
-                    fila.append(int(self.consumir()))
-                    if self.tokens[self.posicion] == ',': self.consumir(',')
-                self.consumir(']')
-                matriz.append(fila)
-            estados.append(matriz)
-        self.consumir('END')
-        self.ast['shapes'][nombre_shape] = estados
         
-        # Asignación segura por defecto
-        self.ast['shapes_color'].setdefault(nombre_shape, "FFFF00")
+        estados = []
+        geometria = "RECTANGLE" # Por defecto para retrocompatibilidad
+        color = "FFFF00"
+
+        while self.posicion < len(self.tokens) and self.tokens[self.posicion] != 'END':
+            token = self.tokens[self.posicion]
+            
+            if token == 'GEOMETRY':
+                self.consumir('GEOMETRY')
+                geometria = self.consumir()
+            elif token == 'COLOR':
+                self.consumir('COLOR')
+                color = self.consumir()
+            elif token == 'STATE':
+                self.consumir('STATE')
+                self.consumir() # Consume número de estado
+                self.consumir(':')
+                matriz = []
+                while self.posicion < len(self.tokens) and self.tokens[self.posicion] == '[':
+                    fila = []
+                    self.consumir('[')
+                    while self.tokens[self.posicion] != ']':
+                        fila.append(int(self.consumir()))
+                        if self.tokens[self.posicion] == ',': self.consumir(',')
+                    self.consumir(']')
+                    matriz.append(fila)
+                estados.append(matriz)
+            else:
+                self.posicion += 1
+
+        self.consumir('END')
+
+        # Si no definió matriz de estados (caso entidades Snake), guardamos la geometría y datos
+        if estados:
+            self.ast['shapes'][nombre_shape] = estados
+        else:
+            self.ast['shapes'][nombre_shape] = {"geometry": geometria}
+
+        self.ast['shapes_color'].setdefault(nombre_shape, color)
         self.ast['shapes_chance'].setdefault(nombre_shape, 1)
 
     def parsear_evento(self):
@@ -149,7 +209,7 @@ class Parser:
                     y = int(self.consumir())
                     self.consumir(')')
                     params.append([x, y])
-            elif self.posicion < len(self.tokens) and self.tokens[self.posicion] not in ['END', 'ON', 'DEFINE', 'SPAWN', 'MOVE', 'ROTATE', 'INCREASE_SCORE', 'SET_DIRECTION', 'GROW', 'GAME_OVER']:
+            elif self.posicion < len(self.tokens) and self.tokens[self.posicion] not in ['END', 'ON', 'DEFINE', 'SPAWN', 'MOVE', 'ROTATE', 'INCREASE_SCORE', 'DECREASE_SCORE', 'SET_DIRECTION', 'GROW', 'GAME_OVER']:
                 params.append(self.consumir())
             acciones.append({'accion': verbo, 'objeto': objeto, 'params': params})
         self.consumir('END')
